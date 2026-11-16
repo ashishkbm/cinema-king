@@ -1,5 +1,8 @@
 {
-  "appId": "com.cinemaking.cinemaking",
+  "appId": "com.cinemaking.king",
   "appName": "Cinema King",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
 }
