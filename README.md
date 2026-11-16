@@ -56,3 +56,7 @@ No APK build or on-device test is claimed until the Android toolchain is availab
 - Add provider-specific AI video adapters.
 - Port the Skia renderer or connect it to a local rendering service.
 - Add keyframe curves, proxies, colour scopes, compositing and transitions.
+
+
+## Current app source
+The mobile-first web application is in `www/` and is packaged for Android with Capacitor. Run `npm install`, `npm run verify`, then `npx cap add android`, `npx cap sync android`, and build with Gradle.
