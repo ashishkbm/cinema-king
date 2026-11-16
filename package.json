@@ -2,18 +2,19 @@
   "name": "cinema-king",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "description": "Standalone offline-first cinematic film maker for Android",
   "scripts": {
-    "start": "vite www --host 0.0.0.0",
-    "build": "vite build www --outDir ../dist",
-    "verify": "node scripts/verify.mjs"
+    "start": "python3 -m http.server 5173 --directory www",
+    "verify": "node scripts/verify.mjs",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/core": "^7.4.3"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.3",
-    "vite": "^6.4.1"
+    "@capacitor/cli": "^7.4.3"
   }
 }
