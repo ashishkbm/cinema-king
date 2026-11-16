@@ -32,6 +32,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Validate source
         run: npm run verify
+      - name: Run automated smoke tests
+        run: npm test
       - name: Add and sync Android platform
         run: |
           npx cap add android
