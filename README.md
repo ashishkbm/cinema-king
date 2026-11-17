@@ -66,7 +66,6 @@ Install Android Studio, Android SDK and a compatible JDK:
 
 ```bash
 npm install
-npm run build
 npx cap add android
 npx cap sync android
 ```
