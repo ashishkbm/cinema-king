@@ -1,5 +1,8 @@
+import os
 import unittest
-from render_service.server import RenderRequest, Scene, _scene_source
+from unittest.mock import patch
+from fastapi.testclient import TestClient
+from render_service.server import RenderRequest, _require_token, _scene_source, app
 
 
 class RenderServiceTests(unittest.TestCase):
@@ -25,6 +28,24 @@ class RenderServiceTests(unittest.TestCase):
     def test_rejects_unsupported_language(self):
         with self.assertRaises(Exception):
             RenderRequest(title="Test", scenes=[{"title": "Opening"}], language="fr")
+
+    def test_health_exposes_voice_and_limit_capabilities(self):
+        with TestClient(app) as client:
+            response = client.get("/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("language_support", response.json())
+        self.assertIn("max_total_images_bytes", response.json()["limits"])
+
+    def test_voice_preview_rejects_empty_text_before_tts(self):
+        with TestClient(app) as client:
+            response = client.post("/api/voice-preview", json={"text": "  ", "language": "en"})
+        self.assertEqual(response.status_code, 422)
+
+    def test_render_token_is_enforced(self):
+        with patch.dict(os.environ, {"CINEMA_KING_RENDER_TOKEN": "test-secret"}):
+            with self.assertRaises(Exception):
+                _require_token(None)
+            _require_token("Bearer test-secret")
 
 
 if __name__ == "__main__":
