@@ -32,7 +32,7 @@ async function renderWithCinematicEngine(){
  try{
   const headers={'Content-Type':'application/json'};
   const token=$('#renderToken').value.trim();if(token)headers.Authorization='Bearer '+token;
-  const response=await fetch(base+'/api/render',{method:'POST',headers,body:JSON.stringify({title:current.title,scenes:current.scenes.map(s=>({title:s.title||'Untitled scene',narration:s.narration||'',duration:s.duration||5})),language:$('#renderLanguage').value,voice:$('#renderVoice').value.trim()||null,size:$('#renderSize').value})});
+  const response=await fetch(base+'/api/render',{method:'POST',headers,body:JSON.stringify({title:current.title,scenes:current.scenes.map(s=>({title:s.title||'Untitled scene',narration:s.narration||'',duration:s.duration||5,image:s.image||null})),language:$('#renderLanguage').value,voice:$('#renderVoice').value.trim()||null,size:$('#renderSize').value})});
   if(!response.ok){let message='Render service returned '+response.status;try{const data=await response.json();message=data.detail||message}catch{}throw new Error(message);}
   const blob=await response.blob();if(!blob.size)throw new Error('The render service returned an empty video.');
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(current.title||'cinema-king').replace(/[^a-z0-9-_]/gi,'_')+'.mp4';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
