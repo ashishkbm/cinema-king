@@ -35,5 +35,9 @@ jobs:
           python -m compileall -q cinematic-engine/cinematic-film/scripts render_service
           python -m unittest render_service.test_service
       - name: Render a real MP4 through the app API
+        env:
+          CINEMA_KING_RENDER_TEST_MODE: "1"
+          CINEMA_KING_RENDER_TEST_SIZE: "320x180"
+          CINEMA_KING_RENDER_FPS: "6"
         run: python -m unittest render_service.test_render_smoke
-        timeout-minutes: 15
+        timeout-minutes: 5
