@@ -51,15 +51,15 @@ test('project, storyboard, preview, import/export and rendering features exist',
     'function drawFrame(', 'function preview(', 'function importProject(',
     'function exportProject(', 'async function renderVideo(', 'async function renderWithCinematicEngine('
   ]) assert.ok(app.includes(symbol), `Missing feature: ${symbol}`);
-  assert.match(app, /localStorage\.getItem\('ck_projects'\)/);
-  assert.match(app, /new MediaRecorder\(/);
-  assert.match(app, /\/api\/render/);
-  assert.match(app, /captureStream\(30\)/);
+  assert.ok(app.includes("localStorage.getItem('ck_projects')"));
+  assert.ok(app.includes('new MediaRecorder('));
+  assert.ok(app.includes('/api/render'));
+  assert.ok(app.includes('captureStream(30)'));
 });
 
 test('mobile layout stylesheet is present and non-empty', () => {
   assert.ok(css.length > 500, 'Stylesheet appears unexpectedly small');
-  assert.match(css, /@media/);
+  assert.ok(css.includes('@media'));
 });
 
 console.log('Cinema King automated smoke tests completed.');
