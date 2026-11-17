@@ -24,7 +24,8 @@ test('main screens and controls exist in the HTML', () => {
     'editor', 'backBtn', 'projectTitle', 'preview', 'sceneList',
     'sceneTitle', 'sceneNarration', 'addScene', 'deleteScene',
     'prevScene', 'nextScene', 'playPreview', 'speakScene',
-    'exportProject', 'sceneImage', 'renderVideo', 'status'
+    'exportProject', 'sceneImage', 'renderVideo', 'status',
+    'cinematicRender', 'renderServiceUrl', 'renderToken', 'renderLanguage', 'renderVoice', 'renderSize'
   ];
   for (const id of requiredIds) {
     assert.match(html, new RegExp('id=["\\']' + id + '["\\']'), `Missing UI control: ${id}`);
@@ -38,7 +39,8 @@ test('core filmmaking actions are wired to UI controls', () => {
     /\$('#addScene'\)\.onclick\s*=\s*addScene/,
     /\$('#deleteScene'\)\.onclick\s*=\s*deleteScene/,
     /\$('#renderVideo'\)\.onclick\s*=\s*renderVideo/,
-    /\$('#exportProject'\)\.onclick\s*=\s*exportProject/
+    /\$('#exportProject'\)\.onclick\s*=\s*exportProject/,
+    /\$('#cinematicRender'\)\.onclick\s*=\s*renderWithCinematicEngine/
   ];
   for (const pattern of handlers) assert.match(app, pattern, `Missing event binding: ${pattern}`);
 });
@@ -47,10 +49,11 @@ test('project, storyboard, preview, import/export and rendering features exist',
   for (const symbol of [
     'function create(', 'function addScene(', 'function deleteScene(',
     'function drawFrame(', 'function preview(', 'function importProject(',
-    'function exportProject(', 'async function renderVideo('
+    'function exportProject(', 'async function renderVideo(', 'async function renderWithCinematicEngine('
   ]) assert.ok(app.includes(symbol), `Missing feature: ${symbol}`);
   assert.match(app, /localStorage\.getItem\('ck_projects'\)/);
   assert.match(app, /new MediaRecorder\(/);
+  assert.match(app, /\/api\/render/);
   assert.match(app, /captureStream\(30\)/);
 });
 
