@@ -1,0 +1,9 @@
+.git
+.github
+node_modules
+android
+*.apk
+*.aab
+.env
+**/__pycache__
+**/*.pyc
