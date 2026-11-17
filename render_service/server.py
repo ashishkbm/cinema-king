@@ -140,6 +140,10 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
         raise HTTPException(status_code=503, detail="Cinematic engine files are missing from this deployment.")
     if not (shutil.which("espeak-ng") or shutil.which("say")):
         raise HTTPException(status_code=503, detail="Install espeak-ng (Linux) or macOS say for scratch narration.")
+    if shutil.which("espeak-ng") and not request.voice and request.language not in _available_espeak_voices():
+        raise HTTPException(status_code=422, detail="The selected language voice is not installed on this render server. Install its espeak-ng voice data or choose another language.")
+    if not shutil.which("espeak-ng") and shutil.which("say") and request.language != "en":
+        raise HTTPException(status_code=422, detail="Hindi and Gujarati require espeak-ng with the matching language voice data on this host.")
     with tempfile.TemporaryDirectory(prefix="cinema-king-") as temp:
         project = Path(temp) / "project"
         shutil.copytree(TEMPLATE, project)
