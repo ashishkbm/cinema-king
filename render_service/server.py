@@ -155,8 +155,13 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
         takes = []
         photo_specs = []
         total_image_bytes = 0
+        final_scene_tail = 3.0
         for index, scene in enumerate(request.scenes, 1):
             narration = scene.narration.strip() or scene.title.strip() or f"Scene {index}"
+            estimated_speech = max(0.8, len(narration.split()) / 2.5)
+            scene_pause = max(0.65, scene.duration - estimated_speech)
+            if index == len(request.scenes):
+                final_scene_tail = max(3.0, scene.duration - estimated_speech)
             if scene.image:
                 match = re.fullmatch(r"data:image/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)", scene.image)
                 if not match:
@@ -183,7 +188,7 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
             takes.append({"take": f"T{index:02d}_scene", "lines": [{
                 "id": index, "text": narration, "spoken": narration,
                 "hero": scene.title.strip() or f"Scene {index}",
-                "typed": scene.title.strip() or f"SCENE {index:02d}", "gap_after": 0.65
+                "typed": scene.title.strip() or f"SCENE {index:02d}", "gap_after": round(scene_pause, 2)
             }]})
         script = {"title": _safe_title(request.title), "takes": takes, "fact_notes": []}
         (project / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -210,7 +215,8 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
                 voice_args += ["--voice", {"en": "en", "hi": "hi", "gu": "gu"}[request.language]]
             _run(["python3", str(SCRIPTS / "tts_say.py"), *voice_args], cwd=project)
             _run(["python3", str(SCRIPTS / "split_takes.py"), "--project", str(project)], cwd=project)
-            _run(["python3", str(SCRIPTS / "build_narration.py"), "--project", str(project)], cwd=project)
+            _run(["python3", str(SCRIPTS / "build_narration.py"), "--project", str(project),
+                  "--tail", str(round(final_scene_tail, 2))], cwd=project)
             _run(["python3", str(SCRIPTS / "render.py"), "--project", str(project), "--size", request.size,
                   "--out", str(output), "--audio", "audio/narration.m4a"], cwd=project, timeout=1800)
         if not output.is_file() or output.stat().st_size < 1024:
