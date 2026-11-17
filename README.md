@@ -4,15 +4,15 @@ Cinema King is a standalone, offline-first storyboard and video creation app for
 
 ## App features
 
-- Multiple film projects, autosaved locally on the device.
+- Multiple film projects, autosaved locally on the device; large storyboard photos are stored in IndexedDB to avoid the browser localStorage quota.
 - Storyboard scenes with titles, narration, duration and imported photos.
 - Cinematic scene preview with image motion, title treatment and project import/export.
-- Browser/device speech preview when a speech voice is available.
+- Browser/device speech preview when a speech voice is available, with server-side voice preview fallback.
 - Local browser video export (WebM) using the device canvas recorder.
 - Remote cinematic MP4 rendering through the Python/Skia engine.
 - Landscape 720p, portrait 720p and square output presets.
 - English, Hindi and Gujarati language selection; actual voices depend on the render host's installed TTS engines and language data.
-- Render server health check and remote voice preview.
+- Render server health check, remote voice preview, and clear connection diagnostics.
 - Image optimization before storage/upload; JPEG/PNG/WebP source photos are sent to the renderer as optimized JPEG.
 - Offline shell caching for the core editor.
 
