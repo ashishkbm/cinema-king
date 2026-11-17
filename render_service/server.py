@@ -41,14 +41,14 @@ def _run(command: list[str], cwd: Path, timeout: int = 900) -> None:
         raise HTTPException(status_code=500, detail=(result.stderr or result.stdout or "Renderer failed")[-3500:])
 
 def _scene_source() -> str:
-    return '''import json
+    return '''import json, os
 from engine import BigText, Card, Film
 
 ACCENT = (198, 142, 65)
 
 def build_film(doc):
     L, E = doc.L, doc.E
-    film = Film(doc.duration, fps=30, look="night")
+    film = Film(doc.duration, fps=int(os.getenv("CINEMA_KING_RENDER_FPS", "30")), look="night")
     script = json.loads((doc.dir / "script.json").read_text())
     lines = [line for take in script["takes"] for line in take["lines"]]
     count = len(lines)
@@ -116,10 +116,18 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
             voice_args += ["--voice", {"en": "en", "hi": "hi", "gu": "gu"}[request.language]]
         _run(["python3", str(SCRIPTS / "tts_say.py"), *voice_args], cwd=project)
         _run(["python3", str(SCRIPTS / "split_takes.py"), "--project", str(project)], cwd=project)
-        _run(["python3", str(SCRIPTS / "build_narration.py"), "--project", str(project)], cwd=project)
+        narration_args = ["python3", str(SCRIPTS / "build_narration.py"), "--project", str(project)]
+        test_mode = os.getenv("CINEMA_KING_RENDER_TEST_MODE") == "1"
+        if test_mode:
+            narration_args += ["--lead", "0.1", "--tail", "0.3"]
+        _run(narration_args, cwd=project)
         output = project / "out" / "cinema-king.mp4"
-        _run(["python3", str(SCRIPTS / "render.py"), "--project", str(project), "--size", request.size,
-              "--out", str(output), "--audio", "audio/narration.m4a"], cwd=project, timeout=1800)
+        render_size = os.getenv("CINEMA_KING_RENDER_TEST_SIZE", request.size) if test_mode else request.size
+        render_args = ["python3", str(SCRIPTS / "render.py"), "--project", str(project), "--size", render_size,
+                       "--out", str(output), "--audio", "audio/narration.m4a"]
+        if test_mode:
+            render_args += ["--workers", "1", "--crf", "28"]
+        _run(render_args, cwd=project, timeout=1800)
         if not output.is_file() or output.stat().st_size < 1024:
             raise HTTPException(status_code=500, detail="Renderer finished without a valid MP4 file.")
         filename = _safe_title(request.title).replace(" ", "-") + ".mp4"
