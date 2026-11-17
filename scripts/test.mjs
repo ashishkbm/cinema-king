@@ -37,3 +37,19 @@ test('mobile layout and service worker cache refresh exist', () => {
   assert.ok(css.includes('@media'));
 });
 console.log('Cinema King automated smoke tests completed.');
+
+test('photo storage and storyboard controls are production-safe', () => {
+  assert.ok(app.includes('indexedDB.open'));
+  assert.ok(app.includes('compressSceneImage'));
+  assert.ok(app.includes('function duplicateScene'));
+  assert.ok(app.includes('function moveScene'));
+  assert.ok(html.includes('id="sceneDuration"'));
+  assert.ok(html.includes('id="removeScenePhoto"'));
+});
+test('renderer connection and voice fallback are available', () => {
+  for (const id of ['checkRenderService', 'renderServiceStatus', 'previewRemoteVoice']) assert.ok(html.includes('id="' + id + '"'));
+  assert.ok(app.includes('/health'));
+  assert.ok(app.includes('/api/voice-preview'));
+  assert.ok(app.includes('async function hydrateProjectImages'));
+  assert.ok(!app.includes("p.url||'http://127.0.0.1:8787'"));
+});
