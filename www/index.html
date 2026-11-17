@@ -39,7 +39,9 @@
 <label>Access token (if configured)<input id="renderToken" type="password" autocomplete="off" placeholder="Optional service token"></label>
 <label>Voice language<select id="renderLanguage"><option value="en">English</option><option value="hi">Hindi</option><option value="gu">Gujarati</option></select></label>
 <label>Installed TTS voice (optional)<input id="renderVoice" type="text" placeholder="e.g. en-us / hi / gu"></label>
-<label>Video size<select id="renderSize"><option value="1280x720">Landscape · 720p</option><option value="720x1280">Portrait · 720p</option><option value="1080x1080">Square · 1080</option></select></label>
+<label>Visual style<select id="renderLook"><option value="night">Night trailer</option><option value="wall">Documentary wall</option><option value="slate">Slate investigation</option><option value="charcoal">Charcoal cinematic</option><option value="paper">Paper editorial</option><option value="studio">Studio product</option><option value="blueprint">Blueprint science</option></select></label>
+<label>Photo grade<select id="renderGrade"><option value="natural">Natural colour</option><option value="bw">Black &amp; white</option><option value="sepia">Sepia</option></select></label>
+<label>Video size<select id="renderSize"><option value="1280x720">Landscape · 720p</option><option value="720x1280">Portrait · 720p</option><option value="1080x1080">Square · 1080</option><option value="1920x1080">Landscape · Full HD</option><option value="1080x1920">Portrait · Full HD</option></select></label>
 </div>
 <div class="engine-actions"><button id="checkRenderService" class="ghost">Check server connection</button><button id="previewRemoteVoice" class="ghost">Preview selected voice</button><button id="cinematicRender" class="primary">Render cinematic MP4 ↗</button></div>
 <div id="renderServiceStatus" class="service-status" role="status">Render server not checked yet.</div>
