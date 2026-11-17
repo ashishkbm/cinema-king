@@ -1,4 +1,37 @@
 const $=s=>document.querySelector(s);
+let ckPosthog=null,ckPosthogInit=null;
+async function initCinemaKingMonitoring(){
+ if(ckPosthogInit)return ckPosthogInit;
+ ckPosthogInit=(async()=>{
+  try{
+   const base=renderBase();if(!base)return;
+   const response=await fetch(base+'/public-config',{cache:'no-store'});if(!response.ok)return;
+   const cfg=await response.json();if(!cfg.posthog_project_token||!cfg.posthog_host)return;
+   const host=cfg.posthog_host.replace(/\/$/,'');
+   window.posthog=window.posthog||[];
+   const ph=window.posthog;
+   if(!ph.__SV){
+    ph._i=[];ph.init=function(token,options,name){
+     function stub(target,key){const parts=key.split('.');if(parts.length===2){target=target[parts[0]];key=parts[1];}target[key]=function(){target.push([key].concat([].slice.call(arguments)));};}
+     const methods='capture captureException identify reset register register_once unregister get_distinct_id get_session_id get_session_replay_url'.split(' ');
+     for(const method of methods)stub(ph,method);
+     const script=document.createElement('script');script.type='text/javascript';script.async=true;script.crossOrigin='anonymous';
+     script.src=host.replace('.i.posthog.com','-assets.i.posthog.com')+'/static/array.js';
+     script.onerror=()=>console.warn('PostHog SDK could not load; Cinema King remains available.');
+     document.head.appendChild(script);ph._i.push([token,options,name]);
+    };ph.__SV=1;
+   }
+   ph.init(cfg.posthog_project_token,{api_host:host,defaults:'2026-08-30',capture_exceptions:true,person_profiles:'identified_only'});
+   ckPosthog=ph;
+  }catch(error){console.warn('Cinema King monitoring initialization skipped:',error);}
+ })();
+ return ckPosthogInit;
+}
+function captureCinemaKingError(error,context){
+ try{if(ckPosthog?.captureException)ckPosthog.captureException(error,{app:'cinema-king',component:context||'frontend'});}catch{}
+}
+window.addEventListener('error',event=>captureCinemaKingError(event.error||new Error(event.message||'Unknown browser error'),'window'));
+window.addEventListener('unhandledrejection',event=>captureCinemaKingError(event.reason instanceof Error?event.reason:new Error(String(event.reason)),'unhandledrejection'));
 let projects=JSON.parse(localStorage.getItem('ck_projects')||'[]'), current=null, active=0, anim=null, assetSaveTimer=null;
 function openAssetDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('cinema-king-assets',1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('images'))req.result.createObjectStore('images',{keyPath:'key'});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 async function syncProjectImages(){const db=await openAssetDB();await new Promise((resolve,reject)=>{const tx=db.transaction('images','readwrite'),store=tx.objectStore('images');store.clear();for(const p of projects)for(const s of p.scenes||[])if(s.image)store.put({key:p.id+':'+s.id,image:s.image});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}
@@ -68,7 +101,7 @@ async function previewRemoteVoice(text){
   if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.detail||('HTTP '+r.status));}
   const blob=await r.blob(),url=URL.createObjectURL(blob),audio=new Audio(url);
   audio.onended=()=>URL.revokeObjectURL(url);await audio.play();$('#status').textContent='Playing server voice preview.';
- }catch(e){$('#status').textContent='Voice preview failed: '+(e.message||e);}
+ }catch(e){captureCinemaKingError(e,'voice-preview');$('#status').textContent='Voice preview failed: '+(e.message||e);}
  finally{if(btn)btn.disabled=false;}
 }
 async function renderWithCinematicEngine(){
@@ -84,8 +117,8 @@ async function renderWithCinematicEngine(){
   const blob=await response.blob();if(!blob.size)throw new Error('The render service returned an empty video.');
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(current.title||'cinema-king').replace(/[^a-z0-9-_]/gi,'_')+'.mp4';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
   $('#status').textContent='Cinematic MP4 received. If the download did not start, check your browser download permissions.';
- }catch(error){$('#status').textContent='Cinematic render failed: '+(error?.message||String(error));}
+ }catch(error){captureCinemaKingError(error,'cinematic-render');$('#status').textContent='Cinematic render failed: '+(error?.message||String(error));}
  finally{btn.disabled=false;}
 }
 
-$('#newProject').onclick=create;$('#startBtn').onclick=create;$('#importBtn').onclick=()=>$('#projectFile').click();$('#projectFile').onchange=e=>e.target.files[0]&&importProject(e.target.files[0]);$('#backBtn').onclick=()=>{if(anim)clearInterval(anim);anim=null;$('#editor').classList.add('hidden');$('.workspace').classList.remove('hidden');$('.hero').classList.remove('hidden');current=null;renderLibrary()};$('#sceneTitle').oninput=updateScene;$('#sceneNarration').oninput=updateScene;$('#sceneDuration').oninput=updateScene;$('#addScene').onclick=addScene;$('#deleteScene').onclick=deleteScene;$('#duplicateScene').onclick=duplicateScene;$('#moveSceneUp').onclick=()=>moveScene(-1);$('#moveSceneDown').onclick=()=>moveScene(1);$('#removeScenePhoto').onclick=removeScenePhoto;$('#prevScene').onclick=()=>next(-1);$('#nextScene').onclick=()=>next(1);$('#playPreview').onclick=preview;$('#speakScene').onclick=speak;$('#exportProject').onclick=exportProject;$('#renderVideo').onclick=renderVideo;$('#sceneImage').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=async()=>{try{const image=await compressSceneImage(r.result);current.scenes[active].image=image;save();renderEditor();$('#status').textContent='Photo added and optimized for cinematic rendering.';}catch(err){$('#status').textContent='Photo could not be processed: '+err.message;}};r.readAsDataURL(f);};renderLibrary();hydrateProjectImages();loadRenderPrefs();$('#cinematicRender').onclick=renderWithCinematicEngine;$('#checkRenderService').onclick=checkRenderService;$('#previewRemoteVoice').onclick=()=>previewRemoteVoice(current?.scenes[active]?.narration||current?.scenes[active]?.title||'Hello from Cinema King');['renderServiceUrl','renderToken','renderLanguage','renderVoice','renderLook','renderGrade','renderSize'].forEach(id=>$('#'+id).addEventListener('change',saveRenderPrefs));if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+$('#newProject').onclick=create;$('#startBtn').onclick=create;$('#importBtn').onclick=()=>$('#projectFile').click();$('#projectFile').onchange=e=>e.target.files[0]&&importProject(e.target.files[0]);$('#backBtn').onclick=()=>{if(anim)clearInterval(anim);anim=null;$('#editor').classList.add('hidden');$('.workspace').classList.remove('hidden');$('.hero').classList.remove('hidden');current=null;renderLibrary()};$('#sceneTitle').oninput=updateScene;$('#sceneNarration').oninput=updateScene;$('#sceneDuration').oninput=updateScene;$('#addScene').onclick=addScene;$('#deleteScene').onclick=deleteScene;$('#duplicateScene').onclick=duplicateScene;$('#moveSceneUp').onclick=()=>moveScene(-1);$('#moveSceneDown').onclick=()=>moveScene(1);$('#removeScenePhoto').onclick=removeScenePhoto;$('#prevScene').onclick=()=>next(-1);$('#nextScene').onclick=()=>next(1);$('#playPreview').onclick=preview;$('#speakScene').onclick=speak;$('#exportProject').onclick=exportProject;$('#renderVideo').onclick=renderVideo;$('#sceneImage').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=async()=>{try{const image=await compressSceneImage(r.result);current.scenes[active].image=image;save();renderEditor();$('#status').textContent='Photo added and optimized for cinematic rendering.';}catch(err){$('#status').textContent='Photo could not be processed: '+err.message;}};r.readAsDataURL(f);};renderLibrary();hydrateProjectImages();loadRenderPrefs();initCinemaKingMonitoring();$('#renderServiceUrl').addEventListener('change',()=>{ckPosthog=null;ckPosthogInit=null;initCinemaKingMonitoring();});$('#cinematicRender').onclick=renderWithCinematicEngine;$('#checkRenderService').onclick=checkRenderService;$('#previewRemoteVoice').onclick=()=>previewRemoteVoice(current?.scenes[active]?.narration||current?.scenes[active]?.title||'Hello from Cinema King');['renderServiceUrl','renderToken','renderLanguage','renderVoice','renderLook','renderGrade','renderSize'].forEach(id=>$('#'+id).addEventListener('change',saveRenderPrefs));if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
