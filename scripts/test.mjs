@@ -53,3 +53,12 @@ test('renderer connection and voice fallback are available', () => {
   assert.ok(app.includes('async function hydrateProjectImages'));
   assert.ok(!app.includes("p.url||'http://127.0.0.1:8787'"));
 });
+
+test('cinematic style and output presets are exposed', () => {
+  for (const id of ['renderLook', 'renderGrade', 'renderSize']) assert.ok(html.includes('id="' + id + '"'));
+  for (const look of ['night', 'wall', 'slate', 'charcoal', 'paper', 'studio', 'blueprint']) assert.ok(html.includes('value="' + look + '"'));
+  assert.ok(app.includes("look:$('#renderLook').value"));
+  assert.ok(app.includes("grade:$('#renderGrade').value"));
+  assert.ok(html.includes('value="1920x1080"'));
+  assert.ok(html.includes('value="1080x1920"'));
+});
