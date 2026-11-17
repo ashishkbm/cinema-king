@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """HTTP adapter that runs the original cinematic-film Python/Skia renderer."""
 from __future__ import annotations
-import base64, binascii, io, json, os, re, shutil, subprocess, tempfile
+import base64, binascii, io, json, os, re, shutil, subprocess, tempfile, logging
 from pathlib import Path
 from typing import Any
 from fastapi import FastAPI, Header, HTTPException
@@ -9,6 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from PIL import Image
+
+logger = logging.getLogger("cinema_king")
+POSTHOG = None
+_POSTHOG_KEY = os.getenv("POSTHOG_PROJECT_TOKEN", "").strip()
+if _POSTHOG_KEY:
+    try:
+        from posthog import Posthog
+        POSTHOG = Posthog(project_api_key=_POSTHOG_KEY, host=os.getenv("POSTHOG_HOST", "https://us.i.posthog.com"), enable_exception_autocapture=True)
+    except Exception:
+        logger.exception("PostHog initialization failed; renderer will continue without monitoring.")
+elif os.getenv("ENVIRONMENT", "production").lower() != "production":
+    logger.warning("POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured")
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "cinematic-engine" / "cinematic-film"
@@ -20,6 +32,9 @@ origins = [x.strip() for x in os.getenv("CINEMA_KING_ALLOWED_ORIGINS",
     "http://localhost:5173,http://127.0.0.1:5173,capacitor://localhost,https://localhost").split(",") if x.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
                    allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"])
+if POSTHOG:
+    from posthog.integrations.asgi import PosthogASGIMiddleware
+    app.add_middleware(PosthogASGIMiddleware, client=POSTHOG)
 
 class Scene(BaseModel):
     title: str = Field(default="Untitled scene", max_length=120)
@@ -42,7 +57,11 @@ def _run(command: list[str], cwd: Path, timeout: int = 900) -> None:
     except subprocess.TimeoutExpired as exc:
         raise HTTPException(status_code=504, detail="Cinematic render timed out. Try a shorter film or lower resolution.") from exc
     if result.returncode:
-        raise HTTPException(status_code=500, detail=(result.stderr or result.stdout or "Renderer failed")[-3500:])
+        detail = (result.stderr or result.stdout or "Renderer failed")[-3500:]
+        if POSTHOG:
+            try: POSTHOG.capture_exception(RuntimeError(detail), distinct_id="cinema-king-renderer")
+            except Exception: logger.exception("PostHog exception capture failed.")
+        raise HTTPException(status_code=500, detail=detail)
 
 def _scene_source() -> str:
     return '''import json, os
@@ -98,6 +117,11 @@ def _available_espeak_voices() -> list[str]:
                 if code in {"en", "hi", "gu"}: found.add(code)
         return sorted(found)
     except Exception: return []
+@app.get("/public-config")
+def public_config() -> dict[str, str | None]:
+    # PostHog project keys are public ingestion keys; never expose private API or render-service tokens.
+    return {"posthog_project_token": _POSTHOG_KEY or None, "posthog_host": os.getenv("POSTHOG_HOST", "https://us.i.posthog.com")}
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     missing = [str(p) for p in (SCRIPTS / "render.py", SCRIPTS / "tts_say.py", TEMPLATE / "script.json") if not p.is_file()]
