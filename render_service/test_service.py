@@ -19,11 +19,20 @@ class RenderServiceTests(unittest.TestCase):
         self.assertEqual(len(request.scenes), 1)
         self.assertEqual(request.scenes[0].narration, "A test scene.")
         self.assertIsNone(request.scenes[0].image)
+        self.assertEqual(request.look, "night")
+        self.assertEqual(request.grade, "natural")
 
     def test_render_request_accepts_photo_data_url(self):
         image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w=="
         request = RenderRequest(title="Photo test", scenes=[{"title": "Photo", "image": image}])
         self.assertEqual(request.scenes[0].image, image)
+
+    def test_render_request_accepts_style_and_full_hd(self):
+        request = RenderRequest(title="Style test", scenes=[{"title": "Scene"}],
+                                look="blueprint", grade="sepia", size="1080x1920")
+        self.assertEqual(request.look, "blueprint")
+        self.assertEqual(request.grade, "sepia")
+        self.assertEqual(request.size, "1080x1920")
 
     def test_rejects_unsupported_language(self):
         with self.assertRaises(Exception):
