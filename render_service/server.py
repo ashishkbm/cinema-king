@@ -78,6 +78,23 @@ def build_film(doc):
 def _safe_title(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_ .-]", "", value).strip()[:120] or "Cinema King Film"
 
+def _require_token(authorization: str | None) -> None:
+    expected = os.getenv("CINEMA_KING_RENDER_TOKEN", "").strip()
+    if expected and authorization != f"Bearer {expected}":
+        raise HTTPException(status_code=401, detail="A valid render-service token is required.")
+
+def _available_espeak_voices() -> list[str]:
+    if not shutil.which("espeak-ng"): return []
+    try:
+        result = subprocess.run(["espeak-ng", "--voices"], capture_output=True, text=True, timeout=8)
+        found = set()
+        for line in result.stdout.splitlines():
+            columns = line.split()
+            if len(columns) > 4 and columns[0].isdigit():
+                code = columns[1].split("-")[0].lower()
+                if code in {"en", "hi", "gu"}: found.add(code)
+        return sorted(found)
+    except Exception: return []
 @app.get("/health")
 def health() -> dict[str, Any]:
     missing = [str(p) for p in (SCRIPTS / "render.py", SCRIPTS / "tts_say.py", TEMPLATE / "script.json") if not p.is_file()]
@@ -88,7 +105,8 @@ def health() -> dict[str, Any]:
         except Exception:
             tools[name] = False
     ready = not missing and all(tools.get(x, False) for x in ("ffmpeg", "ffprobe", "skia-python", "numpy", "pillow")) and (tools["espeak-ng"] or tools["say"])
-    return {"ok": not missing, "ready": ready, "engine_files_missing": missing, "tools": tools}
+    voices = _available_espeak_voices()
+    return {"ok": not missing, "ready": ready, "engine_files_missing": missing, "tools": tools, "voices": voices, "language_support": {code: code in voices for code in ("en", "hi", "gu")}, "limits": {"max_scenes": 80, "max_image_bytes": 8 * 1024 * 1024, "max_total_images_bytes": 25 * 1024 * 1024}}
 
 @app.post("/api/voice-preview")
 def voice_preview(payload: dict[str, Any], authorization: str | None = Header(default=None)) -> Response:
@@ -129,6 +147,7 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
             (project / sub).mkdir(parents=True, exist_ok=True)
         takes = []
         photo_specs = []
+        total_image_bytes = 0
         for index, scene in enumerate(request.scenes, 1):
             narration = scene.narration.strip() or scene.title.strip() or f"Scene {index}"
             if scene.image:
@@ -139,6 +158,9 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
                     raw = base64.b64decode(match.group(2), validate=True)
                     if len(raw) > 8 * 1024 * 1024:
                         raise HTTPException(status_code=413, detail=f"Scene {index}: image exceeds 8 MB.")
+                    total_image_bytes += len(raw)
+                    if total_image_bytes > 25 * 1024 * 1024:
+                        raise HTTPException(status_code=413, detail="Combined storyboard photos exceed 25 MB.")
                     with Image.open(io.BytesIO(raw)) as source:
                         source.verify()
                     with Image.open(io.BytesIO(raw)) as source:
