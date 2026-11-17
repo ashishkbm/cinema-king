@@ -28,7 +28,7 @@ test('main screens and controls exist in the HTML', () => {
     'cinematicRender', 'renderServiceUrl', 'renderToken', 'renderLanguage', 'renderVoice', 'renderSize'
   ];
   for (const id of requiredIds) {
-    assert.match(html, new RegExp('id=["\\']' + id + '["\\']'), `Missing UI control: ${id}`);
+    assert.ok(html.includes(`id="${id}"`) || html.includes(`id='${id}'`), `Missing UI control: ${id}`);
   }
 });
 
