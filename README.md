@@ -89,3 +89,8 @@ GitHub Actions also builds a debug APK artifact. Successful CI packaging is not 
 ## Source and attribution
 
 The cinematic engine source is included under its upstream MIT license. See cinematic-engine/LICENSE and cinematic-engine/README.upstream.md.
+
+
+### Docker Compose deployment
+
+Copy `render_service/.env.example` to `.env` in the repository root. Set a long random `CINEMA_KING_RENDER_TOKEN` and the exact allowed origins. Run `docker compose up -d --build`. The compose file binds the service to host loopback so an HTTPS reverse proxy on the same server can forward requests to it. Do not expose port 8787 directly to the public internet.
