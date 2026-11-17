@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """HTTP adapter that runs the original cinematic-film Python/Skia renderer."""
 from __future__ import annotations
-import json, os, re, shutil, subprocess, tempfile
+import base64, binascii, io, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "cinematic-engine" / "cinematic-film"
@@ -24,6 +25,7 @@ class Scene(BaseModel):
     title: str = Field(default="Untitled scene", max_length=120)
     narration: str = Field(default="", max_length=MAX_TEXT)
     duration: float = Field(default=5, ge=1, le=120)
+    image: str | None = Field(default=None, max_length=12 * 1024 * 1024)
 
 class RenderRequest(BaseModel):
     title: str = Field(default="Cinema King Film", max_length=120)
@@ -42,7 +44,7 @@ def _run(command: list[str], cwd: Path, timeout: int = 900) -> None:
 
 def _scene_source() -> str:
     return '''import json, os
-from engine import BigText, Card, Film
+from engine import BigText, Card, Film, Print
 
 ACCENT = (198, 142, 65)
 
@@ -63,6 +65,10 @@ def build_film(doc):
                          rgb=(235, 222, 196), shadow=True, grunge=False, type_on=0.55))
         film.add(Card(x, 350, 3000, 1550, L(index) + 0.12, title=f"CHAPTER {index:02d}",
                       lines=[body] if body else [], accent=ACCENT, title_size=210, body_size=130))
+        photo_key = f"P{index:02d}"
+        if photo_key in doc.meta:
+            film.add(Print(photo_key, x, -250, 2300, rot=0.0, t_in=L(index) - 0.12,
+                           border=0.025, pin=False, paper=False))
         film.shot(0.0 if index == 1 else L(index) - 0.25, x, 100, 0.62)
         film.shot(E(index) - 0.05, x + 180, 180, 0.58)
     film.shot(film.duration, 0, 0, 0.24, radius=18000, strength=0.12)
@@ -99,8 +105,29 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
         for sub in ("assets/photos", "assets/prep", "audio/takes", "out", "fonts"):
             (project / sub).mkdir(parents=True, exist_ok=True)
         takes = []
+        photo_specs = []
         for index, scene in enumerate(request.scenes, 1):
             narration = scene.narration.strip() or scene.title.strip() or f"Scene {index}"
+            if scene.image:
+                match = re.fullmatch(r"data:image/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)", scene.image)
+                if not match:
+                    raise HTTPException(status_code=422, detail=f"Scene {index}: image must be a JPEG, PNG or WebP data URL.")
+                try:
+                    raw = base64.b64decode(match.group(2), validate=True)
+                    if len(raw) > 8 * 1024 * 1024:
+                        raise HTTPException(status_code=413, detail=f"Scene {index}: image exceeds 8 MB.")
+                    with Image.open(io.BytesIO(raw)) as source:
+                        source.verify()
+                    with Image.open(io.BytesIO(raw)) as source:
+                        if source.width * source.height > 24_000_000:
+                            raise HTTPException(status_code=413, detail=f"Scene {index}: image dimensions are too large.")
+                        prepared = source.convert("RGB")
+                        prepared.thumbnail((2400, 2400), Image.Resampling.LANCZOS)
+                        photo_file = f"P{index:02d}.jpg"
+                        prepared.save(project / "assets" / "photos" / photo_file, format="JPEG", quality=90, optimize=True)
+                    photo_specs.append({"id": f"P{index:02d}", "file": photo_file, "kind": "photo"})
+                except (binascii.Error, OSError, ValueError) as exc:
+                    raise HTTPException(status_code=422, detail=f"Scene {index}: image could not be decoded.") from exc
             takes.append({"take": f"T{index:02d}_scene", "lines": [{
                 "id": index, "text": narration, "spoken": narration,
                 "hero": scene.title.strip() or f"Scene {index}",
@@ -109,6 +136,9 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
         script = {"title": _safe_title(request.title), "takes": takes, "fact_notes": []}
         (project / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
         (project / "scene.py").write_text(_scene_source(), encoding="utf-8")
+        if photo_specs:
+            (project / "photos.json").write_text(json.dumps({"grade": "natural", "photos": photo_specs}, indent=2), encoding="utf-8")
+            _run(["python3", str(SCRIPTS / "prep_assets.py"), "--project", str(project), "--grade", "natural"], cwd=project, timeout=240)
         output = project / "out" / "cinema-king.mp4"
         test_mode = os.getenv("CINEMA_KING_RENDER_TEST_MODE") == "1"
         if test_mode:
