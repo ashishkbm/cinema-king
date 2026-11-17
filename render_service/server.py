@@ -90,11 +90,34 @@ def health() -> dict[str, Any]:
     ready = not missing and all(tools.get(x, False) for x in ("ffmpeg", "ffprobe", "skia-python", "numpy", "pillow")) and (tools["espeak-ng"] or tools["say"])
     return {"ok": not missing, "ready": ready, "engine_files_missing": missing, "tools": tools}
 
+@app.post("/api/voice-preview")
+def voice_preview(payload: dict[str, Any], authorization: str | None = Header(default=None)) -> Response:
+    _require_token(authorization)
+    text = str(payload.get("text", "")).strip()[:600]
+    language = str(payload.get("language", "en"))
+    voice = str(payload.get("voice") or "").strip()
+    if not text: raise HTTPException(status_code=422, detail="Enter some narration to preview.")
+    if language not in {"en", "hi", "gu"}: raise HTTPException(status_code=422, detail="Language must be English, Hindi or Gujarati.")
+    with tempfile.TemporaryDirectory(prefix="cinema-king-voice-") as temp:
+        folder = Path(temp); wav = folder / "preview.wav"
+        if shutil.which("espeak-ng"):
+            selected = voice or language
+            result = subprocess.run(["espeak-ng", "-s", "165", "-v", selected, "-w", str(wav), text], capture_output=True, text=True, timeout=45)
+            if result.returncode: raise HTTPException(status_code=422, detail="Selected voice is not installed: " + selected)
+        elif shutil.which("say") and language == "en":
+            aiff = folder / "preview.aiff"; command = ["say", "-o", str(aiff)]
+            if voice: command += ["-v", voice]
+            command.append(text)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=45)
+            if result.returncode: raise HTTPException(status_code=422, detail=(result.stderr or "Selected voice is unavailable.")[-1200:])
+            _run(["ffmpeg", "-y", "-v", "error", "-i", str(aiff), "-ar", "22050", "-ac", "1", str(wav)], cwd=folder, timeout=30)
+        else: raise HTTPException(status_code=503, detail="No compatible local voice engine is installed for this language.")
+        if not wav.is_file(): raise HTTPException(status_code=500, detail="Voice engine did not produce audio.")
+        return Response(content=wav.read_bytes(), media_type="audio/wav", headers={"Cache-Control": "no-store"})
+
 @app.post("/api/render")
 def render(request: RenderRequest, authorization: str | None = Header(default=None)) -> Response:
-    expected = os.getenv("CINEMA_KING_RENDER_TOKEN", "").strip()
-    if expected and authorization != f"Bearer {expected}":
-        raise HTTPException(status_code=401, detail="A valid render-service token is required.")
+    _require_token(authorization)
     if not (SCRIPTS / "render.py").is_file() or not TEMPLATE.is_dir():
         raise HTTPException(status_code=503, detail="Cinematic engine files are missing from this deployment.")
     if not (shutil.which("espeak-ng") or shutil.which("say")):
