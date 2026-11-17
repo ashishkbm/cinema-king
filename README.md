@@ -10,7 +10,7 @@ Cinema King is a standalone, offline-first storyboard and video creation app for
 - Browser/device speech preview when a speech voice is available, with server-side voice preview fallback.
 - Local browser video export (WebM) using the device canvas recorder.
 - Remote cinematic MP4 rendering through the Python/Skia engine.
-- Landscape 720p, portrait 720p and square output presets.
+- Seven cinematic looks (night, wall, slate, charcoal, paper, studio, blueprint), natural/B&W/sepia photo grades, and landscape/portrait 720p, square 1080 and full-HD landscape/portrait output presets.
 - English, Hindi and Gujarati language selection; actual voices depend on the render host's installed TTS engines and language data.
 - Render server health check, remote voice preview, and clear connection diagnostics.
 - Image optimization before storage/upload; JPEG/PNG/WebP source photos are sent to the renderer as optimized JPEG.
