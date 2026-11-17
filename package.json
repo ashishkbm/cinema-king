@@ -10,7 +10,7 @@
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
     "test": "node --test scripts/test.mjs",
-    "render:service": "python3 -m uvicorn render_service.server:app --host 127.0.0.1 --port 8787"
+    "render:service": "python3 -m uvicorn render_service.server:app --host 0.0.0.0 --port 8787"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
