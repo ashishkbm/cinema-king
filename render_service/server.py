@@ -32,7 +32,9 @@ class RenderRequest(BaseModel):
     scenes: list[Scene] = Field(min_length=1, max_length=80)
     language: str = Field(default="en", pattern="^(en|hi|gu)$")
     voice: str | None = Field(default=None, max_length=80)
-    size: str = Field(default="1280x720", pattern="^(1280x720|720x1280|1080x1080)$")
+    look: str = Field(default="night", pattern="^(night|wall|slate|charcoal|paper|studio|blueprint)$")
+    grade: str = Field(default="natural", pattern="^(natural|bw|sepia)$")
+    size: str = Field(default="1280x720", pattern="^(1280x720|720x1280|1080x1080|1920x1080|1080x1920)$")
 
 def _run(command: list[str], cwd: Path, timeout: int = 900) -> None:
     try:
@@ -50,7 +52,8 @@ ACCENT = (198, 142, 65)
 
 def build_film(doc):
     L, E = doc.L, doc.E
-    film = Film(doc.duration, fps=int(os.getenv("CINEMA_KING_RENDER_FPS", "30")), look="night")
+    look_config = json.loads((doc.dir / "look.json").read_text()) if (doc.dir / "look.json").exists() else {}
+    film = Film(doc.duration, fps=int(os.getenv("CINEMA_KING_RENDER_FPS", "30")), look=look_config.get("look", "night"))
     script = json.loads((doc.dir / "script.json").read_text())
     lines = [line for take in script["takes"] for line in take["lines"]]
     count = len(lines)
@@ -185,9 +188,10 @@ def render(request: RenderRequest, authorization: str | None = Header(default=No
         script = {"title": _safe_title(request.title), "takes": takes, "fact_notes": []}
         (project / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
         (project / "scene.py").write_text(_scene_source(), encoding="utf-8")
+        (project / "look.json").write_text(json.dumps({"look": request.look}), encoding="utf-8")
         if photo_specs:
-            (project / "photos.json").write_text(json.dumps({"grade": "natural", "photos": photo_specs}, indent=2), encoding="utf-8")
-            _run(["python3", str(SCRIPTS / "prep_assets.py"), "--project", str(project), "--grade", "natural"], cwd=project, timeout=240)
+            (project / "photos.json").write_text(json.dumps({"grade": request.grade, "photos": photo_specs}, indent=2), encoding="utf-8")
+            _run(["python3", str(SCRIPTS / "prep_assets.py"), "--project", str(project), "--grade", request.grade], cwd=project, timeout=240)
         output = project / "out" / "cinema-king.mp4"
         test_mode = os.getenv("CINEMA_KING_RENDER_TEST_MODE") == "1"
         if test_mode:
