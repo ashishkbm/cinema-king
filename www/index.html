@@ -30,6 +30,19 @@
 <label>Narration<textarea id="sceneNarration" rows="3" placeholder="Write what the narrator says..."></textarea></label>
 <div class="detail-actions"><label class="upload">＋ Add photo<input id="sceneImage" type="file" accept="image/*" hidden></label><button id="speakScene" class="ghost">♬ Speak scene</button><button id="deleteScene" class="danger">Delete scene</button></div>
 </div>
+<section class="cinematic-engine-panel">
+<div class="panel-title"><h3>♛ Cinematic Engine · MP4</h3><span class="muted">Python / Skia renderer</span></div>
+<p class="engine-help">Render this storyboard with cinematic camera moves, animated cards and synchronized narration. The render service must be running separately.</p>
+<div class="engine-settings">
+<label>Render service URL<input id="renderServiceUrl" type="url" placeholder="https://your-render-service.example"></label>
+<label>Access token (if configured)<input id="renderToken" type="password" autocomplete="off" placeholder="Optional service token"></label>
+<label>Voice language<select id="renderLanguage"><option value="en">English</option><option value="hi">Hindi</option><option value="gu">Gujarati</option></select></label>
+<label>Installed TTS voice (optional)<input id="renderVoice" type="text" placeholder="e.g. en-us / hi / gu"></label>
+<label>Video size<select id="renderSize"><option value="1280x720">Landscape · 720p</option><option value="720x1280">Portrait · 720p</option><option value="1080x1080">Square · 1080</option></select></label>
+</div>
+<button id="cinematicRender" class="primary">Render cinematic MP4 ↗</button>
+<small class="muted engine-footnote">Web and Android use the same remote render service. For Android, use a reachable HTTPS service URL, not 127.0.0.1.</small>
+</section>
 <div class="render-bar"><div><b>Ready for the final cut?</b><small>Render an animated video on this device.</small></div><button id="renderVideo" class="primary">Render video ↗</button></div>
 <div id="status" class="status" role="status"></div>
 </section>
