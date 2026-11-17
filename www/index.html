@@ -28,7 +28,8 @@
 <div class="panel-title"><h3>Scene direction</h3><span class="muted" id="sceneNumber">Scene 1</span></div>
 <label>On-screen title<input id="sceneTitle" maxlength="90" placeholder="A title that commands attention"></label>
 <label>Narration<textarea id="sceneNarration" rows="3" placeholder="Write what the narrator says..."></textarea></label>
-<div class="detail-actions"><label class="upload">＋ Add photo<input id="sceneImage" type="file" accept="image/*" hidden></label><button id="speakScene" class="ghost">♬ Speak scene</button><button id="deleteScene" class="danger">Delete scene</button></div>
+<label>Scene duration (seconds)<input id="sceneDuration" type="number" min="1" max="120" step="1" value="5"></label>
+<div class="detail-actions"><label class="upload">＋ Add photo<input id="sceneImage" type="file" accept="image/*" hidden></label><button id="speakScene" class="ghost">♬ Speak scene</button><button id="duplicateScene" class="ghost">Duplicate</button><button id="moveSceneUp" class="ghost">↑ Move up</button><button id="moveSceneDown" class="ghost">↓ Move down</button><button id="removeScenePhoto" class="ghost">Remove photo</button><button id="deleteScene" class="danger">Delete scene</button></div>
 </div>
 <section class="cinematic-engine-panel">
 <div class="panel-title"><h3>♛ Cinematic Engine · MP4</h3><span class="muted">Python / Skia renderer</span></div>
@@ -44,7 +45,7 @@
 <div id="renderServiceStatus" class="service-status" role="status">Render server not checked yet.</div>
 <small class="muted engine-footnote">Web and Android use the same remote render service. For Android, use your server’s public HTTPS URL. 127.0.0.1 only works when the renderer runs on the same device.</small>
 </section>
-<div class="render-bar"><div><b>Ready for the final cut?</b><small>Render an animated video on this device.</small></div><button id="renderVideo" class="primary">Render video ↗</button></div>
+<div class="render-bar"><div><b>Ready for the final cut?</b><small>Quick silent visual draft · WebM. Use MP4 renderer for narrated films.</small></div><button id="renderVideo" class="primary">Render silent WebM ↗</button></div>
 <div id="status" class="status" role="status"></div>
 </section>
 </main>
