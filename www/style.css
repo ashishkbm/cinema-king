@@ -7,3 +7,5 @@
 .engine-footnote{display:block;margin-top:10px}
 #cinematicRender:disabled{opacity:.55;cursor:wait}
 @media(max-width:560px){.engine-settings{grid-template-columns:1fr}}
+
+.engine-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.service-status{font-size:12px;color:#aab2bf;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#090e15;min-height:38px}.service-status[data-state=ready]{color:#9ee0b2;border-color:#286b42}.service-status[data-state=warning]{color:#f0cd83;border-color:#73572a}.service-status[data-state=error]{color:#ffb1b1;border-color:#713b3b}
