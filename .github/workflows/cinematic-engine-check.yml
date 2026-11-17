@@ -19,7 +19,7 @@ jobs:
       - name: Install native render tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg espeak-ng
+          sudo apt-get install -y ffmpeg espeak-ng libegl1 libgl1 libgles2
       - name: Install web dependencies
         run: npm install --no-audit --no-fund
       - name: Verify web application
