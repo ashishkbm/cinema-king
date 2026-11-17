@@ -54,7 +54,7 @@ def silences(path):
 
 def weight(text):
     """Rough speaking-time weight: letters, plus allowances for commas and sentence breaks inside the line."""
-    return len(re.sub(r"[^A-Za-z]", "", text)) + 6 * text.count(",") + 14 * len(re.findall(r"[.!?](?=\s+\S)", text.strip()))
+    return sum(ch.isalpha() for ch in text) + 6 * text.count(",") + 14 * len(re.findall(r"[.!?](?=\s+\S)", text.strip()))
 
 
 def choose_cuts(cands, w, start, end, p0=0.55):
