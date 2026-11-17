@@ -34,15 +34,15 @@ test('main screens and controls exist in the HTML', () => {
 
 test('core filmmaking actions are wired to UI controls', () => {
   const handlers = [
-    /\$('#newProject'\)\.onclick\s*=\s*create/,
-    /\$('#startBtn'\)\.onclick\s*=\s*create/,
-    /\$('#addScene'\)\.onclick\s*=\s*addScene/,
-    /\$('#deleteScene'\)\.onclick\s*=\s*deleteScene/,
-    /\$('#renderVideo'\)\.onclick\s*=\s*renderVideo/,
-    /\$('#exportProject'\)\.onclick\s*=\s*exportProject/,
-    /\$('#cinematicRender'\)\.onclick\s*=\s*renderWithCinematicEngine/
+    "$('#newProject').onclick=create",
+    "$('#startBtn').onclick=create",
+    "$('#addScene').onclick=addScene",
+    "$('#deleteScene').onclick=deleteScene",
+    "$('#renderVideo').onclick=renderVideo",
+    "$('#exportProject').onclick=exportProject",
+    "$('#cinematicRender').onclick=renderWithCinematicEngine"
   ];
-  for (const pattern of handlers) assert.match(app, pattern, `Missing event binding: ${pattern}`);
+  for (const handler of handlers) assert.ok(app.includes(handler), 'Missing event binding: ' + handler);
 });
 
 test('project, storyboard, preview, import/export and rendering features exist', () => {
