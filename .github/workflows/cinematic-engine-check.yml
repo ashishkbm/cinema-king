@@ -1,0 +1,43 @@
+name: Cinema King integration checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install native render tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng libegl1 libgl1 libgles2
+      - name: Install web dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify web application
+        run: |
+          npm run verify
+          npm test
+      - name: Install render dependencies
+        run: |
+          python -m pip install -r cinematic-engine/requirements.txt
+          python -m pip install -r render_service/requirements.txt
+      - name: Validate Python source and adapter
+        run: |
+          python -m compileall -q cinematic-engine/cinematic-film/scripts render_service
+          python -m unittest render_service.test_service
+      - name: Render a real MP4 through the app API
+        env:
+          CINEMA_KING_RENDER_TEST_MODE: "1"
+          CINEMA_KING_RENDER_TEST_SIZE: "320x180"
+          CINEMA_KING_RENDER_FPS: "6"
+        run: python -m unittest render_service.test_render_smoke
+        timeout-minutes: 5

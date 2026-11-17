@@ -1,62 +1,77 @@
-# Cinema King — Standalone Full Video Studio
+# Cinema King — mobile-first film studio
 
-Cinema King is an independent mobile-first filmmaking application based on the supplied `cinematic-film` skill. It is not a Motion Explainer fork.
+Cinema King is a standalone web application packaged for Android with Capacitor. It is separate from Motion Explainer.
 
-## Included studio features
-- Multiple projects saved locally in IndexedDB, with a project switcher.
-- Import photos, video files and audio files into the local media bin.
-- Three-track timeline: video, text/graphics and audio; seek, playhead, zoom and duration ruler.
-- Clip inspector: rename, start time, duration, duplicate, delete and split at playhead.
-- Scene controls: image fit, cinematic/monochrome/vintage/bright/cool looks, slow zoom/pan motion and fade/cut transition selection.
-- Editable title cards, lower thirds and captions.
-- Audio clips with volume and fade controls.
-- Speech synthesis preview through installed device/browser voices.
-- Subtitle SRT export from scene narration.
-- Aspect ratios 16:9, 9:16, 1:1 and 4:5.
-- Browser WebM rendering with optional audio mixing where MediaRecorder supports it.
-- Optional Android native bridge source for H.264 MP4 video encoding, Gallery saving and Android TextToSpeech audio-file generation.
-- Offline app shell caching.
-- The original uploaded Skia/Python cinematic-film skill remains included under `cinematic-engine/cinematic-film/`.
+## Current app features
 
-## AI Studio
-AI Studio can generate a script/storyboard and generate still images for selected scenes through an OpenAI-compatible API. Configure the API base URL, chat model, image model and key in Settings. The API key is stored locally and sent to the configured endpoint. Provider charges, rate limits, CORS restrictions and model availability apply. AI video generation is not included yet; provider-specific adapters are required.
+- Create and switch between film projects saved in browser local storage.
+- Build a scene-by-scene storyboard with titles, narration and imported scene images.
+- Preview scenes with cinematic styling and motion.
+- Preview narration using speech voices installed in the browser/device.
+- Export the current storyboard as a browser-rendered WebM video.
+- Import and export project JSON.
+- Offline shell caching for the core web application.
 
-## Voiceover and language support
-Browser speech preview uses installed device voices. Android native TextToSpeech can generate WAV files using installed voice data. Hindi (`hi-IN`), Gujarati (`gu-IN`) and English variants are selectable, subject to installed language data. Cinema King does not bundle proprietary voice packs.
+## Cinematic Film Engine integration
 
-## Export formats and limitations
-Browser mode exports WebM using Canvas + MediaRecorder. The Android native bridge includes MediaCodec H.264 MP4 encoding and Gallery saving, but native audio-track muxing is not implemented; native MP4 is currently silent. The native bridge has not yet been compiled or device-tested. Video decode depends on Android WebView codec support.
+The original MIT-licensed `cinematic-film` skill is included under `cinematic-engine/cinematic-film/`. It uses Python, Skia and FFmpeg to create deterministic code-rendered films with a continuous camera, animated typography/cards, sound and synchronized narration.
 
-## Run in browser
+The app's **Cinematic Engine · MP4** panel sends the current storyboard to a separate Python render service. That service creates a temporary project, generates scratch narration using the host's installed TTS voice, aligns scene timings, and invokes the original renderer.
+
+The first integration renders scene titles and narration as cinematic animated typography/cards. Scene image uploads remain available in the browser editor but are not yet passed into the Python renderer. Final-quality multilingual voice packs, image-aware rendering, render queues and remote job progress are future improvements.
+
+### Start the render service
+
+Install Python 3.9+, FFmpeg/FFprobe, a system TTS voice (`espeak-ng` on Linux or macOS `say`), and the Python packages:
+
+```bash
+python3 -m pip install -r cinematic-engine/requirements.txt
+python3 -m pip install -r render_service/requirements.txt
+```
+
+Run from the repository root:
+
+```bash
+npm run render:service
+```
+
+Check readiness at `http://127.0.0.1:8787/health`. Configure the render service URL in the editor. For an Android device, use a reachable HTTPS service URL; `127.0.0.1` on the phone points to the phone itself, not your computer.
+
+For a network-accessible service, set `CINEMA_KING_RENDER_TOKEN` to a strong secret and `CINEMA_KING_ALLOWED_ORIGINS` to the exact web origins. Use HTTPS, authentication, quotas and an appropriate reverse proxy. Do not expose an unauthenticated render service publicly.
+
+### Rendering limitations
+
+- The Python/Skia engine runs on the render-service host, not inside Android WebView.
+- Browser export is WebM; the separate cinematic service returns MP4.
+- Scratch narration quality and language depend on installed host voices. Hindi and Gujarati voices are not bundled.
+- The current adapter does not transfer scene image files into the cinematic project.
+- The renderer is CPU/RAM intensive. Long videos may take several minutes or more.
+
+## Run the web app
+
 Node.js 22+:
+
 ```bash
 npm install
+npm run verify
+npm test
 npm run start
-npm run build
 ```
+
+Open `http://localhost:5173`.
 
 ## Build Android
+
 Install Android Studio, Android SDK and a compatible JDK:
+
 ```bash
 npm install
-npm run build
 npx cap add android
-bash android-setup/setup-android-native.sh
 npx cap sync android
 ```
-Then build the debug APK in Android Studio or run `cd android && ./gradlew assembleDebug`.
 
-No APK build or on-device test is claimed until the Android toolchain is available and the build is verified.
+Then build the debug APK in Android Studio or with `cd android && ./gradlew assembleDebug`. The repository's GitHub Actions workflow also builds a debug APK artifact. An APK or on-device test is not claimed until that workflow succeeds and the app is tested on a device.
 
-## Included rendering engine
-`cinematic-engine/cinematic-film/` contains the original skill, templates, Python scripts and references. It is a desktop/server renderer requiring Python, Skia, NumPy, Pillow and FFmpeg; it is not yet ported into the Android WebView.
+## Source and attribution
 
-## Next engineering tasks
-- Compile and test the native bridge; implement audio-track muxing.
-- Add provider-specific AI video adapters.
-- Port the Skia renderer or connect it to a local rendering service.
-- Add keyframe curves, proxies, colour scopes, compositing and transitions.
-
-
-## Current app source
-The mobile-first web application is in `www/` and is packaged for Android with Capacitor. Run `npm install`, `npm run verify`, then `npx cap add android`, `npx cap sync android`, and build with Gradle.
+The cinematic engine source is included under the upstream MIT license. See `cinematic-engine/LICENSE` and `cinematic-engine/README.upstream.md`.
