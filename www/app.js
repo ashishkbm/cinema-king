@@ -22,8 +22,8 @@ async function renderVideo(){if(!window.MediaRecorder){alert('Video recording is
 
 const RENDER_PREFS='ck_cinematic_render_prefs';
 function renderPrefs(){try{return JSON.parse(localStorage.getItem(RENDER_PREFS)||'{}')}catch{return {}}}
-function loadRenderPrefs(){const p=renderPrefs();$('#renderServiceUrl').value=p.url||'http://127.0.0.1:8787';$('#renderToken').value=p.token||'';$('#renderLanguage').value=p.language||'en';$('#renderVoice').value=p.voice||'';$('#renderSize').value=p.size||'1280x720';}
-function saveRenderPrefs(){localStorage.setItem(RENDER_PREFS,JSON.stringify({url:$('#renderServiceUrl').value.trim(),token:$('#renderToken').value,language:$('#renderLanguage').value,voice:$('#renderVoice').value.trim(),size:$('#renderSize').value}));}
+function loadRenderPrefs(){const p=renderPrefs();$('#renderServiceUrl').value=p.url||'http://127.0.0.1:8787';$('#renderToken').value='';$('#renderLanguage').value=p.language||'en';$('#renderVoice').value=p.voice||'';$('#renderSize').value=p.size||'1280x720';}
+function saveRenderPrefs(){localStorage.setItem(RENDER_PREFS,JSON.stringify({url:$('#renderServiceUrl').value.trim(),language:$('#renderLanguage').value,voice:$('#renderVoice').value.trim(),size:$('#renderSize').value}));}
 async function renderWithCinematicEngine(){
  if(!current)return;
  const btn=$('#cinematicRender'),base=$('#renderServiceUrl').value.trim().replace(/\/+$/,'');
